@@ -170,22 +170,22 @@ Resources:
         - IpProtocol: tcp
           FromPort: !Ref ContainerPortEmployee
           ToPort: !Ref ContainerPortEmployee
-          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: !Ref ContainerPortAttendance
           ToPort: !Ref ContainerPortAttendance
-          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
-
-  LoadBalancerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: !Join ['', [!Ref ServiceName, LoadBalancerSecurityGroup]]
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: !Ref LoadBalancerPort
-          ToPort: !Ref LoadBalancerPort
           CidrIp: 0.0.0.0/0
+
+  # LoadBalancerSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupDescription: !Join ['', [!Ref ServiceName, LoadBalancerSecurityGroup]]
+  #     VpcId: !Ref VPC
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: !Ref LoadBalancerPort
+  #         ToPort: !Ref LoadBalancerPort
+  #         CidrIp: 0.0.0.0/0
 
   ServiceEmployee:
     Type: AWS::ECS::Service
@@ -291,7 +291,7 @@ Resources:
           Type: forward
       LoadBalancerArn: !Ref LoadBalancerEmployee
       Port: !Ref LoadBalancerPort
-      Protocol: HTTPS
+      Protocol: TLS
       Certificates:
         - CertificateArn: !Ref Certificate
 
@@ -303,57 +303,59 @@ Resources:
           Type: forward
       LoadBalancerArn: !Ref LoadBalancerAttendance
       Port: !Ref LoadBalancerPort
-      Protocol: HTTPS
+      Protocol: TLS
       Certificates:
         - CertificateArn: !Ref Certificate
 
   LoadBalancerEmployee:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      LoadBalancerAttributes:
+      # LoadBalancerAttributes:
         # this is the default, but is specified here in case it needs to be changed
-        - Key: idle_timeout.timeout_seconds
-          Value: 60
-      Name: !Join ['', [!Ref ServiceName, LoadBalancerEmployee]]
+        # - Key: idle_timeout.timeout_seconds
+        #   Value: 60
+      Name: !Join ['', [!Ref ServiceName, LoadBalancerEmployeee]]
       # "internal" is also an option
       Scheme: internal
-      SecurityGroups:
-        - !Ref LoadBalancerSecurityGroup
+      # SecurityGroups:
+      #   - !Ref LoadBalancerSecurityGroup
       Subnets:
         - !Ref SubnetA
         - !Ref SubnetB
+      Type: network
 
   LoadBalancerAttendance:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      LoadBalancerAttributes:
+      # LoadBalancerAttributes:
         # this is the default, but is specified here in case it needs to be changed
-        - Key: idle_timeout.timeout_seconds
-          Value: 60
-      Name: !Join ['', [!Ref ServiceName, LoadBalancerAttendance]]
+        # - Key: idle_timeout.timeout_seconds
+        #   Value: 60
+      Name: !Join ['', [!Ref ServiceName, LoadBalancerAttendancee]]
       # "internal" is also an option
       Scheme: internal
-      SecurityGroups:
-        - !Ref LoadBalancerSecurityGroup
+      # SecurityGroups:
+      #   - !Ref LoadBalancerSecurityGroup
       Subnets:
         - !Ref SubnetA
         - !Ref SubnetB
+      Type: network
   
-  ApiGatewayVPCLinkEmployee:
-    Type: AWS::ApiGateway::VpcLink
-    Properties:
-      Description: ApiGateway Link to Core Network LoadBalancer in VPC
-      Name: ApiGatewayVPCLinkEmployee
-      TargetArns:
-        - !Ref LoadBalancerEmployee
+  # ApiGatewayVPCLinkEmployee:
+  #   Type: AWS::ApiGateway::VpcLink
+  #   Properties:
+  #     Description: ApiGateway Link to Core Network LoadBalancer in VPC
+  #     Name: ApiGatewayVPCLinkEmployee
+  #     TargetArns:
+  #       - !Ref LoadBalancerEmployee
   
-  ApiGatewayVPCLinkAttendance:
-    Type: AWS::ApiGateway::VpcLink
-    Properties:
-      Description: ApiGateway Link to Core Network LoadBalancer in VPC
-      Name: ApiGatewayVPCLinkAttendance
-      TargetArns:
-        - !Ref LoadBalancerAttendance
+  # ApiGatewayVPCLinkAttendance:
+  #   Type: AWS::ApiGateway::VpcLink
+  #   Properties:
+  #     Description: ApiGateway Link to Core Network LoadBalancer in VPC
+  #     Name: ApiGatewayVPCLinkAttendance
+  #     TargetArns:
+  #       - !Ref LoadBalancerAttendance
 
   # DNSRecord:
   #   Type: AWS::Route53::RecordSet
