@@ -252,13 +252,13 @@ Resources:
     Properties:
       HealthCheckIntervalSeconds: 10
       # will look for a 200 status code by default unless specified otherwise
-      HealthCheckPath: !Ref HealthCheckPath
+      # HealthCheckPath: !Ref HealthCheckPath
       HealthCheckTimeoutSeconds: 5
       UnhealthyThresholdCount: 2
       HealthyThresholdCount: 2
-      Name: !Join ['', [!Ref ServiceName, TargetGroupEmployee]]
+      Name: !Join ['', [!Ref ServiceName, TargetGroupEmployeee]]
       Port: !Ref ContainerPortEmployee
-      Protocol: HTTP
+      Protocol: TCP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 60 # default is 300
@@ -270,13 +270,13 @@ Resources:
     Properties:
       HealthCheckIntervalSeconds: 10
       # will look for a 200 status code by default unless specified otherwise
-      HealthCheckPath: !Ref HealthCheckPath
+      # HealthCheckPath: !Ref HealthCheckPath
       HealthCheckTimeoutSeconds: 5
       UnhealthyThresholdCount: 2
       HealthyThresholdCount: 2
-      Name: !Join ['', [!Ref ServiceName, TargetGroupAttendance]]
+      Name: !Join ['', [!Ref ServiceName, TargetGroupAttendancee]]
       Port: !Ref ContainerPortAttendance
-      Protocol: HTTP
+      Protocol: TCP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 60 # default is 300
@@ -341,21 +341,71 @@ Resources:
         - !Ref SubnetB
       Type: network
   
-  # ApiGatewayVPCLinkEmployee:
-  #   Type: AWS::ApiGateway::VpcLink
-  #   Properties:
-  #     Description: ApiGateway Link to Core Network LoadBalancer in VPC
-  #     Name: ApiGatewayVPCLinkEmployee
-  #     TargetArns:
-  #       - !Ref LoadBalancerEmployee
+  ApiGatewayVPCLinkEmployee:
+    Type: AWS::ApiGateway::VpcLink
+    Properties:
+      Description: ApiGateway Link to Core Network LoadBalancer in VPC
+      Name: ApiGatewayVPCLinkEmployee
+      TargetArns:
+        - !Ref LoadBalancerEmployee
   
-  # ApiGatewayVPCLinkAttendance:
-  #   Type: AWS::ApiGateway::VpcLink
-  #   Properties:
-  #     Description: ApiGateway Link to Core Network LoadBalancer in VPC
-  #     Name: ApiGatewayVPCLinkAttendance
-  #     TargetArns:
-  #       - !Ref LoadBalancerAttendance
+  ApiGatewayVPCLinkAttendance:
+    Type: AWS::ApiGateway::VpcLink
+    Properties:
+      Description: ApiGateway Link to Core Network LoadBalancer in VPC
+      Name: ApiGatewayVPCLinkAttendance
+      TargetArns:
+        - !Ref LoadBalancerAttendance
+  
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      EndpointConfiguration:
+        Types:
+          - EDGE
+      Name: Api
+  
+  RestApiResourceEmployee:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: employee
+      RestApiId: !Ref RestApi
+
+  RestApiResourceAttendance:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: attendance
+      RestApiId: !Ref RestApi
+  
+  RestApiMethodEmployee:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: ANY
+      Integration:
+        ConnectionType: VPC_LINK
+        ConnectionId: !Ref ApiGatewayVPCLinkEmployee
+        IntegrationHttpMethod: ANY
+        Type: AWS_PROXY
+        Uri: "https://api.bunthoeurn.train.mbanq.cloud"
+      ResourceId: !Ref RestApiResourceEmployee
+      RestApiId: !Ref RestApi
+
+  RestApiMethodAttendance:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: ANY
+      Integration:
+        ConnectionType: VPC_LINK
+        ConnectionId: !Ref ApiGatewayVPCLinkAttendance
+        IntegrationHttpMethod: ANY
+        Type: AWS_PROXY
+        Uri: "https://api.bunthoeurn.train.mbanq.cloud"
+      ResourceId: !Ref RestApiResourceAttendance
+      RestApiId: !Ref RestApi
 
   # DNSRecord:
   #   Type: AWS::Route53::RecordSet
