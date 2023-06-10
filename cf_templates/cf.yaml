@@ -3,13 +3,13 @@ Description: An example CloudFormation template for Fargate.
 Parameters:
   VPC:
     Type: AWS::EC2::VPC::Id
-    Default: vpc-01b7e4e37ab744107
+    Default: vpc-0a54f5ed456524114
   SubnetA:
     Type: AWS::EC2::Subnet::Id
-    Default: subnet-0d6052ff144e0f90f
+    Default: subnet-0f15e0746544ff8d6
   SubnetB:
     Type: AWS::EC2::Subnet::Id
-    Default: subnet-0855355efb1a1834d
+    Default: subnet-0e55aa84d73921b28
   Certificate:
     Type: String
     # Update with the certificate ARN from Certificate Manager, which must exist in the same region.
@@ -338,6 +338,22 @@ Resources:
       Subnets:
         - !Ref SubnetA
         - !Ref SubnetB
+  
+  ApiGatewayVPCLinkEmployee:
+    Type: AWS::ApiGateway::VpcLink
+    Properties:
+      Description: ApiGateway Link to Core Network LoadBalancer in VPC
+      Name: ApiGatewayVPCLinkEmployee
+      TargetArns:
+        - !Ref LoadBalancerEmployee
+  
+  ApiGatewayVPCLinkAttendance:
+    Type: AWS::ApiGateway::VpcLink
+    Properties:
+      Description: ApiGateway Link to Core Network LoadBalancer in VPC
+      Name: ApiGatewayVPCLinkAttendance
+      TargetArns:
+        - !Ref LoadBalancerAttendance
 
   # DNSRecord:
   #   Type: AWS::Route53::RecordSet
