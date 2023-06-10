@@ -3,14 +3,17 @@ Description: An example CloudFormation template for Fargate.
 Parameters:
   VPC:
     Type: AWS::EC2::VPC::Id
+    Default: vpc-01b7e4e37ab744107
   SubnetA:
     Type: AWS::EC2::Subnet::Id
+    Default: subnet-0d6052ff144e0f90f
   SubnetB:
     Type: AWS::EC2::Subnet::Id
+    Default: subnet-0855355efb1a1834d
   Certificate:
     Type: String
     # Update with the certificate ARN from Certificate Manager, which must exist in the same region.
-    Default: 'arn:aws:acm:region:123456789012:certificate/00000000-0000-0000-0000-000000000000'
+    Default: 'arn:aws:acm:us-east-1:527047085842:certificate/3f20d90c-b73b-4fa6-a076-f08718068d2f'
   Image:
     Type: String
     # Update with the Docker image. "You can use images in the Docker Hub registry or specify other repositories (repository-url/image:tag)."
@@ -30,10 +33,10 @@ Parameters:
     Default: /healthcheck
   HostedZoneName:
     Type: String
-    Default: company.com
+    Default: bunthoeurn.train.mbanq.cloud
   Subdomain:
     Type: String
-    Default: myservice
+    Default: api
   # for autoscaling
   MinContainers:
     Type: Number
@@ -239,12 +242,12 @@ Resources:
     Properties:
       LogGroupName: !Join ['', [/ecs/, !Ref ServiceName, TaskDefinition]]
   AutoScalingTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Type: AWS::ApplicationAutoScaling::ScalableTargethong
     Properties:
       MinCapacity: !Ref MinContainers
       MaxCapacity: !Ref MaxContainers
       ResourceId: !Join ['/', [service, !Ref Cluster, !GetAtt Service.Name]]
-      ScalableDimension: ecs:service:DesiredCount
+      ScalableDimension: ecs:service:DesiredCounhongt
       ServiceNamespace: ecs
       # "The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that allows Application Auto Scaling to modify your scalable target."
       RoleARN: !GetAtt AutoScalingRole.Arn
