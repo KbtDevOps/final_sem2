@@ -39,7 +39,7 @@ Parameters:
     Default: 443
   HealthCheckPath:
     Type: String
-    Default: /healthcheck
+    Default: /
   HostedZoneName:
     Type: String
     Default: bunthoeurn.train.mbanq.cloud
@@ -92,12 +92,12 @@ Resources:
       # "The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that grants containers in the task permission to call AWS APIs on your behalf."
       TaskRoleArn: !Ref TaskRole
       ContainerDefinitions:
-        - Name: !Ref ServiceName
+        - Name: !Sub ${ServiceName}-container-employee
           Image: !Ref ImageEmployee
           PortMappings:
             - ContainerPort: !Ref ContainerPortEmployee
 
-  TaskDefinitionAttendacne:
+  TaskDefinitionAttendance:
     Type: AWS::ECS::TaskDefinition
     Properties:
       # Name of the task definition. Subsequent versions of the task definition are grouped together under this name.
@@ -125,7 +125,7 @@ Resources:
       # "The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that grants containers in the task permission to call AWS APIs on your behalf."
       TaskRoleArn: !Ref TaskRole
       ContainerDefinitions:
-        - Name: !Ref ServiceName
+        - Name: !Sub ${ServiceName}-container-attendance
           Image: !Ref ImageAttendance
           PortMappings:
             - ContainerPort: !Ref ContainerPortAttendance
@@ -168,8 +168,12 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: !Ref ContainerPort
-          ToPort: !Ref ContainerPort
+          FromPort: !Ref ContainerPortEmployee
+          ToPort: !Ref ContainerPortEmployee
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+        - IpProtocol: tcp
+          FromPort: !Ref ContainerPortAttendance
+          ToPort: !Ref ContainerPortAttendance
           SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
 
   LoadBalancerSecurityGroup:
@@ -191,7 +195,7 @@ Resources:
     Properties: 
       ServiceName: !Sub ${ServiceName}-service-employee
       Cluster: !Ref Cluster
-      TaskDefinition: !Ref TaskDefinition
+      TaskDefinition: !Ref TaskDefinitionEmployee
       DeploymentConfiguration:
         MinimumHealthyPercent: 100
         MaximumPercent: 200
@@ -209,7 +213,7 @@ Resources:
           SecurityGroups:
             - !Ref ContainerSecurityGroup
       LoadBalancers:
-        - ContainerName: !Ref ServiceName
+        - ContainerName: !Sub ${ServiceName}-container-employee
           ContainerPort: !Ref ContainerPortEmployee
           TargetGroupArn: !Ref TargetGroupEmployee
   
@@ -221,7 +225,7 @@ Resources:
     Properties: 
       ServiceName: !Sub ${ServiceName}-service-attendance
       Cluster: !Ref Cluster
-      TaskDefinition: !Ref TaskDefinition
+      TaskDefinition: !Ref TaskDefinitionAttendance
       DeploymentConfiguration:
         MinimumHealthyPercent: 100
         MaximumPercent: 200
@@ -239,7 +243,7 @@ Resources:
           SecurityGroups:
             - !Ref ContainerSecurityGroup
       LoadBalancers:
-        - ContainerName: !Ref ServiceName
+        - ContainerName: !Sub ${ServiceName}-container-attendance
           ContainerPort: !Ref ContainerPortAttendance
           TargetGroupArn: !Ref TargetGroupAttendance
 
@@ -335,17 +339,17 @@ Resources:
         - !Ref SubnetA
         - !Ref SubnetB
 
-  DNSRecord:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      HostedZoneName: !Join ['', [!Ref HostedZoneName, .]]
-      Name: !Join ['', [!Ref Subdomain, ., !Ref HostedZoneName, .]]
-      Type: A
-      AliasTarget:
-        DNSName: !GetAtt LoadBalancer.DNSName
-        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+  # DNSRecord:
+  #   Type: AWS::Route53::RecordSet
+  #   Properties:
+  #     HostedZoneName: !Join ['', [!Ref HostedZoneName, .]]
+  #     Name: !Join ['', [!Ref Subdomain, ., !Ref HostedZoneName, .]]
+  #     Type: A
+  #     AliasTarget:
+  #       DNSName: !GetAtt LoadBalancer.DNSName
+  #       HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
 
-Outputs:
-  Endpoint:
-    Description: Endpoint
-    Value: !Join ['', ['https://', !Ref DNSRecord]]
+# Outputs:
+#   Endpoint:
+#     Description: Endpoint
+#     Value: !Join ['', ['https://', !Ref DNSRecord]]
