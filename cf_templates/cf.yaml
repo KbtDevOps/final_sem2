@@ -66,11 +66,9 @@ Resources:
 
   TaskDefinitionEmployee:
     Type: AWS::ECS::TaskDefinition
-    # Makes sure the log group is created before it is used.
-    DependsOn: LogGroup
     Properties:
       # Name of the task definition. Subsequent versions of the task definition are grouped together under this name.
-      Family: !Join ['', [!Ref ServiceName, TaskDefinition]]
+      Family: !Sub ${ServiceName}-employee
       # awsvpc is required for Fargate
       NetworkMode: awsvpc
       RequiresCompatibilities:
@@ -101,11 +99,9 @@ Resources:
 
   TaskDefinitionAttendacne:
     Type: AWS::ECS::TaskDefinition
-    # Makes sure the log group is created before it is used.
-    DependsOn: LogGroup
     Properties:
       # Name of the task definition. Subsequent versions of the task definition are grouped together under this name.
-      Family: !Join ['', [!Ref ServiceName, TaskDefinition]]
+      Family: !Sub ${ServiceName}-attendance
       # awsvpc is required for Fargate
       NetworkMode: awsvpc
       RequiresCompatibilities:
@@ -191,9 +187,9 @@ Resources:
     Type: AWS::ECS::Service
     # This dependency is needed so that the load balancer is setup correctly in time
     DependsOn:
-      - ListenerHTTPS
+      - ListenerHTTPSEmployee
     Properties: 
-      ServiceName: !Ref ServiceName
+      ServiceName: !Sub ${ServiceName}-service-employee
       Cluster: !Ref Cluster
       TaskDefinition: !Ref TaskDefinition
       DeploymentConfiguration:
@@ -215,15 +211,15 @@ Resources:
       LoadBalancers:
         - ContainerName: !Ref ServiceName
           ContainerPort: !Ref ContainerPortEmployee
-          TargetGroupArn: !Ref TargetGroup
+          TargetGroupArn: !Ref TargetGroupEmployee
   
   ServiceAttendance:
     Type: AWS::ECS::Service
     # This dependency is needed so that the load balancer is setup correctly in time
     DependsOn:
-      - ListenerHTTPS
+      - ListenerHTTPSAttendance
     Properties: 
-      ServiceName: !Ref ServiceName
+      ServiceName: !Sub ${ServiceName}-service-attendance
       Cluster: !Ref Cluster
       TaskDefinition: !Ref TaskDefinition
       DeploymentConfiguration:
@@ -245,7 +241,7 @@ Resources:
       LoadBalancers:
         - ContainerName: !Ref ServiceName
           ContainerPort: !Ref ContainerPortAttendance
-          TargetGroupArn: !Ref TargetGroup
+          TargetGroupArn: !Ref TargetGroupAttendance
 
   TargetGroupEmployee:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -256,7 +252,7 @@ Resources:
       HealthCheckTimeoutSeconds: 5
       UnhealthyThresholdCount: 2
       HealthyThresholdCount: 2
-      Name: !Join ['', [!Ref ServiceName, TargetGroup]]
+      Name: !Join ['', [!Ref ServiceName, TargetGroupEmployee]]
       Port: !Ref ContainerPortEmployee
       Protocol: HTTP
       TargetGroupAttributes:
@@ -274,7 +270,7 @@ Resources:
       HealthCheckTimeoutSeconds: 5
       UnhealthyThresholdCount: 2
       HealthyThresholdCount: 2
-      Name: !Join ['', [!Ref ServiceName, TargetGroup]]
+      Name: !Join ['', [!Ref ServiceName, TargetGroupAttendance]]
       Port: !Ref ContainerPortAttendance
       Protocol: HTTP
       TargetGroupAttributes:
@@ -287,7 +283,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref TargetGroup
+        - TargetGroupArn: !Ref TargetGroupEmployee
           Type: forward
       LoadBalancerArn: !Ref LoadBalancerEmployee
       Port: !Ref LoadBalancerPort
@@ -299,7 +295,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref TargetGroup
+        - TargetGroupArn: !Ref TargetGroupAttendance
           Type: forward
       LoadBalancerArn: !Ref LoadBalancerAttendance
       Port: !Ref LoadBalancerPort
@@ -314,7 +310,7 @@ Resources:
         # this is the default, but is specified here in case it needs to be changed
         - Key: idle_timeout.timeout_seconds
           Value: 60
-      Name: !Join ['', [!Ref ServiceName, LoadBalancer]]
+      Name: !Join ['', [!Ref ServiceName, LoadBalancerEmployee]]
       # "internal" is also an option
       Scheme: internal
       SecurityGroups:
@@ -330,7 +326,7 @@ Resources:
         # this is the default, but is specified here in case it needs to be changed
         - Key: idle_timeout.timeout_seconds
           Value: 60
-      Name: !Join ['', [!Ref ServiceName, LoadBalancer]]
+      Name: !Join ['', [!Ref ServiceName, LoadBalancerAttendance]]
       # "internal" is also an option
       Scheme: internal
       SecurityGroups:
