@@ -176,17 +176,6 @@ Resources:
           ToPort: !Ref ContainerPortAttendance
           CidrIp: 0.0.0.0/0
 
-  # LoadBalancerSecurityGroup:
-  #   Type: AWS::EC2::SecurityGroup
-  #   Properties:
-  #     GroupDescription: !Join ['', [!Ref ServiceName, LoadBalancerSecurityGroup]]
-  #     VpcId: !Ref VPC
-  #     SecurityGroupIngress:
-  #       - IpProtocol: tcp
-  #         FromPort: !Ref LoadBalancerPort
-  #         ToPort: !Ref LoadBalancerPort
-  #         CidrIp: 0.0.0.0/0
-
   ServiceEmployee:
     Type: AWS::ECS::Service
     # This dependency is needed so that the load balancer is setup correctly in time
@@ -251,8 +240,6 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 10
-      # will look for a 200 status code by default unless specified otherwise
-      # HealthCheckPath: !Ref HealthCheckPath
       HealthCheckTimeoutSeconds: 5
       UnhealthyThresholdCount: 2
       HealthyThresholdCount: 2
@@ -269,8 +256,6 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 10
-      # will look for a 200 status code by default unless specified otherwise
-      # HealthCheckPath: !Ref HealthCheckPath
       HealthCheckTimeoutSeconds: 5
       UnhealthyThresholdCount: 2
       HealthyThresholdCount: 2
@@ -310,15 +295,9 @@ Resources:
   LoadBalancerEmployee:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      # LoadBalancerAttributes:
-        # this is the default, but is specified here in case it needs to be changed
-        # - Key: idle_timeout.timeout_seconds
-        #   Value: 60
       Name: !Join ['', [!Ref ServiceName, LoadBalancerEmployeee]]
       # "internal" is also an option
       Scheme: internal
-      # SecurityGroups:
-      #   - !Ref LoadBalancerSecurityGroup
       Subnets:
         - !Ref SubnetA
         - !Ref SubnetB
@@ -327,15 +306,9 @@ Resources:
   LoadBalancerAttendance:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      # LoadBalancerAttributes:
-        # this is the default, but is specified here in case it needs to be changed
-        # - Key: idle_timeout.timeout_seconds
-        #   Value: 60
       Name: !Join ['', [!Ref ServiceName, LoadBalancerAttendancee]]
       # "internal" is also an option
       Scheme: internal
-      # SecurityGroups:
-      #   - !Ref LoadBalancerSecurityGroup
       Subnets:
         - !Ref SubnetA
         - !Ref SubnetB
@@ -388,9 +361,9 @@ Resources:
         ConnectionType: VPC_LINK
         ConnectionId: !Ref ApiGatewayVPCLinkEmployee
         IntegrationHttpMethod: ANY
-        Type: AWS_PROXY
+        Type: HTTP_PROXY
         Uri: "https://api.bunthoeurn.train.mbanq.cloud"
-      ResourceId: !Ref RestApiResourceEmployee
+      ResourceId: !GetAtt RestApiResourceEmployee.ResourceId
       RestApiId: !Ref RestApi
 
   RestApiMethodAttendance:
@@ -402,22 +375,49 @@ Resources:
         ConnectionType: VPC_LINK
         ConnectionId: !Ref ApiGatewayVPCLinkAttendance
         IntegrationHttpMethod: ANY
-        Type: AWS_PROXY
+        Type: HTTP_PROXY
         Uri: "https://api.bunthoeurn.train.mbanq.cloud"
-      ResourceId: !Ref RestApiResourceAttendance
+      ResourceId: !GetAtt RestApiResourceAttendance.ResourceId
       RestApiId: !Ref RestApi
+  
+  ApiDomainName:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      CertificateArn: !Ref Certificate
+      DomainName: !Sub ${Subdomain}.${HostedZoneName}
+      EndpointConfiguration:
+        Types:
+          - EDGE
+      SecurityPolicy: TLS_1_2
+  
+  ApiRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join ['', [!Ref HostedZoneName, .]]
+      Name: !Ref ApiDomainName
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt ApiDomainName.DistributionHostedZoneId
+        DNSName: !GetAtt ApiDomainName.DistributionDomainName
+  
+  RestApiDeployment:
+      Type: AWS::ApiGateway::Deployment
+      DependsOn:
+        - RestApiMethodAttendance
+        - RestApiMethodEmployee
+      Properties:
+        RestApiId: !Ref RestApi
 
-  # DNSRecord:
-  #   Type: AWS::Route53::RecordSet
-  #   Properties:
-  #     HostedZoneName: !Join ['', [!Ref HostedZoneName, .]]
-  #     Name: !Join ['', [!Ref Subdomain, ., !Ref HostedZoneName, .]]
-  #     Type: A
-  #     AliasTarget:
-  #       DNSName: !GetAtt LoadBalancer.DNSName
-  #       HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
-
-# Outputs:
-#   Endpoint:
-#     Description: Endpoint
-#     Value: !Join ['', ['https://', !Ref DNSRecord]]
+  RestApiStage:
+      Type: AWS::ApiGateway::Stage
+      Properties:
+        DeploymentId: !Ref RestApiDeployment
+        RestApiId: !Ref RestApi
+        StageName: "stage"
+  
+  ApiDomainPathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: !Ref ApiDomainName
+      RestApiId: !Ref RestApi
+      Stage: !Ref RestApiStage
